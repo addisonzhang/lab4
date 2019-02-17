@@ -123,7 +123,7 @@ textbook for some advice.)
 
 let rec max_list (lst : int list) : int =
   match lst with
-  | [] -> raise (Failure "empty List")
+  | [] -> raise (Invalid_argument "max_list: empty list")
   | [elt] -> elt
   | head :: tail -> max head (max_list tail) ;;
      
