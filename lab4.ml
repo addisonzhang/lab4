@@ -3,6 +3,7 @@
 	       Error Handling, Options, and Exceptions
  *)
 
+open List ;; 
    
 (*======================================================================
 Part 1: Currying and uncurrying
@@ -32,9 +33,14 @@ To think about before you start coding:
 Now implement the two functions curry and uncurry.
 ......................................................................*)
 
-let curry = fun _ -> failwith "curry not implemented" ;;
-     
-let uncurry = fun _ -> failwith "uncurry not implemented" ;;
+(* let curry : (('a * 'b) -> 'c) -> ('a -> 'b -> 'c) = fun u_fun a b -> u_fun (a, b) ;;
+
+let uncurry : ('a -> 'b -> 'c) -> (('a * 'b) -> 'c) = fun u_fun (a, b) -> u_fun a b ;;
+ *)
+
+let curry (uncurried : ('a * 'b) -> 'c) (x : 'a) (y : 'b) : 'c = uncurried (x, y) ;; 
+
+let uncurry (curried : 'a -> 'b -> 'c) ((x, y) : ('a * 'b)) : 'c = curried x y ;;
 
 (*......................................................................
 Exercise 2: OCaml's built in binary operators, like ( + ) and ( * ) are
@@ -49,11 +55,9 @@ Using your uncurry function, define uncurried versions of the plus and
 times functions.
 ......................................................................*)
 
-let plus =
-  fun _ -> failwith "plus not implemented"
+let plus = uncurry ( + );; 
      
-let times =
-  fun _ -> failwith "times not implemented" ;;
+let times = uncurry ( * );;
   
 (*......................................................................
 Exercise 3: Recall the prods function from Lab 1:
@@ -67,8 +71,10 @@ Now reimplement prods using map and your uncurried times function. Why
 do you need the uncurried times function?
 ......................................................................*)
 
-let prods =
-  fun _ -> failwith "prods not implemented" ;; 
+(* let prods lst = map (fun a -> times a) lst ;; 
+ *)
+
+let prods = List.map times ;;
 
 (*======================================================================
 Part 2: Option types
@@ -102,8 +108,11 @@ instead of an int. Call it max_list_opt. The None return value should
 be used when called on an empty list.
 ......................................................................*)
 
-let max_list_opt (lst : int list) : int option =
-  failwith "max_list_opt not implemented" ;;
+let rec max_list_opt (lst : int list) : int option =
+  match lst with
+  | [] -> None
+  | [elt] -> Some elt
+  | head :: tail -> max (Some head) (max_list_opt tail) ;;
 
 (*......................................................................
 Exercise 5: Alternatively, we could have max_list raise an exception
@@ -112,8 +121,11 @@ does so. What exception should it raise? (See Section 10.2 in the
 textbook for some advice.)
 ......................................................................*)
 
-let max_list (lst : int list) : int =
-  failwith "max_list not implemented" ;;
+let rec max_list (lst : int list) : int =
+  match lst with
+  | [] -> raise (Failure "empty List")
+  | [elt] -> elt
+  | head :: tail -> max head (max_list tail) ;;
      
 (*......................................................................
 Exercise 6: Write a function min_option to return the smaller of two
@@ -124,7 +136,11 @@ are handled; no nonexhaustive match warnings!
 ......................................................................*)
 
 let min_option (x : int option) (y : int option) : int option =
-  failwith "min_option not implemented" ;;
+  match x, y with 
+  | None, None -> None
+  | Some a, None -> Some a
+  | None, Some b -> Some b
+  | Some a, Some b -> Some (min a b);;
      
 (*......................................................................
 Exercise 7: Write a function plus_option to return the sum of two int
@@ -133,7 +149,11 @@ return the other.
 ......................................................................*)
 
 let plus_option (x : int option) (y : int option) : int option =
-  failwith "plus_option not implemented" ;;
+  match x, y with 
+  | None, None -> None
+  | Some a, None -> Some a
+  | None, Some b -> Some b
+  | Some a, Some b -> Some (a + b);;
 
 (*======================================================================
 Part 3: Polymorphism practice
@@ -156,19 +176,21 @@ What is calc_option's function type signature?
 Now implement calc_option.
 ......................................................................*)
 
-let calc_option =
-  fun _ -> failwith "calc_option not implemented" ;;
+let calc_option (x : 'a option) (y : 'a option) (func: 'a -> 'a -> 'a) : 'a option =
+  match x, y with 
+  | None, None -> None
+  | Some a, None -> Some a
+  | None, Some b -> Some b
+  | Some a, Some b -> Some (func a b);;
      
 (*......................................................................
 Exercise 9: Now rewrite min_option and plus_option using the higher-order
 function calc_option. Call them min_option_2 and plus_option_2.
 ......................................................................*)
   
-let min_option_2 =
-  fun _ -> failwith "min_option_2 not implemented" ;;
+let min_option_2 x y = calc_option x y min ;;
      
-let plus_option_2 =
-  fun _ -> failwith "plus_option_2 not implemented" ;;
+let plus_option_2 x y = calc_option x y (+) ;;
 
 (*......................................................................
 Exercise 10: Now that we have calc_option, we can use it in other
@@ -178,8 +200,7 @@ AND of two bool options, or None if both are None. If exactly one is
 None, return the other.
 ......................................................................*)
   
-let and_option =
-  fun _ -> failwith "and_option not implemented" ;;
+let and_option x y = calc_option x y (&&) ;;
   
 (*......................................................................
 Exercise 11: In Lab 3, you implemented a polymorphic function zip that
@@ -201,8 +222,14 @@ that its signature has changed, which returns an appropriate option
 type in case it is called with lists of unequal length.
 ......................................................................*)
 
-let zip_opt =
-  fun _ -> failwith "zip not implemented" ;;
+let rec zip_opt (x : 'a list) (y : 'b list) : (('a * 'b) list) option =
+  match (x, y) with
+  | [], [] -> Some []
+  | xhd :: xtl, yhd :: ytl ->
+    (match zip_opt xtl ytl with
+      | None -> None
+      | Some ztl -> Some ((xhd, yhd) :: ztl))
+  | _, _ -> None ;;
 
 (*====================================================================
 Part 4: Factoring out None-handling
@@ -244,7 +271,9 @@ Now implement the maybe function.
 ......................................................................*)
   
 let maybe (f : 'a -> 'b) (x : 'a option) : 'b option =
-  failwith "maybe not implemented" ;; 
+  match x with
+  | None -> None
+  | Some v -> Some (f v) ;;
 
 (*......................................................................
 Exercise 13: Now reimplement dotprod to use the maybe function. (The
@@ -255,7 +284,7 @@ the version we provided above at the top of Part 4.
 ......................................................................*)
 
 let dotprod (a : int list) (b : int list) : int option =
-  failwith "dotprod not implemented" ;; 
+  maybe (fun pairs -> sum (prods pairs)) (zip_opt a b) ;;
 
 (*......................................................................
 Exercise 14: Reimplement zip_opt along the same lines, in zip_opt_2
@@ -263,7 +292,11 @@ below.
 ......................................................................*)
 
 let rec zip_opt_2 (x : 'a list) (y : 'b list) : (('a * 'b) list) option =
-  failwith "zip_opt_2 not implemented" ;;
+  match (x, y) with
+  | [], [] -> Some []
+  | xhd :: xtl, yhd :: ytl ->
+    maybe (fun ztl -> ((xhd, yhd) :: ztl)) (zip_opt_2 xtl ytl)
+  | _, _ -> None ;;
 
 (*......................................................................
 Exercise 15: For the energetic, reimplement max_list_opt along the
@@ -272,5 +305,8 @@ function always passes along the None.
 ......................................................................*)
 
 let rec max_list_opt_2 (lst : int list) : int option =
-  failwith "max_list not implemented" ;; 
+  match lst with
+  | [] -> None
+  | [single] -> Some single
+  | head :: tail ->maybe (fun max_tail -> max head max_tail)(max_list_opt_2 tail) ;;
 
